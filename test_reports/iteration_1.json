@@ -1,0 +1,25 @@
+{
+  "summary": "First-finish smoke test of Dashboard Informasi Kelurahan. Backend GET/auth/CRUD endpoints all functional; frontend dashboard, darurat, kader, admin login flow, theme toggle, and mobile bottom nav all working. No console errors detected.",
+  "tested_scope": ["backend", "frontend", "auth", "integration"],
+  "passed": [
+    "GET /api/info returns Kelurahan info (name=Kelurahan Sukamaju, KK=2547, penduduk=8934, RT=24, RW=6)",
+    "GET /api/contacts?category=emergency returns 11 items; ambulans sample includes status='available' and 'Standby 24 jam'",
+    "GET /api/contacts?category=kader returns 6 items",
+    "GET /api/announcements returns 4 items; GET /api/agenda returns 4 items",
+    "POST /api/auth/login with admin@kelurahan.id/admin123 returns access_token+user; wrong password returns 401 'Email atau password salah'",
+    "GET /api/auth/me without token returns 401; with Bearer token returns admin user",
+    "POST /api/contacts unauth returns 401; with Bearer creates entity",
+    "DELETE /api/contacts/{id} works with token; non-existent returns 404 'Kontak tidak ditemukan'",
+    "Frontend Dashboard loads with stats-grid and announcements-ticker",
+    "Emergency page: search filter narrows to 2 cards for 'ambulans'; CSV & PDF download buttons visible",
+    "Kader page loads",
+    "/admin redirects to /admin/login when unauthenticated; login navigates to admin panel with contacts/announcements/agenda tabs",
+    "Theme toggle switches html class from 'light' to 'dark'",
+    "Mobile viewport (390x844) shows bottom-nav with 5 items"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true
+}

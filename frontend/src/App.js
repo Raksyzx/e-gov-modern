@@ -1,0 +1,49 @@
+import "@/App.css";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Layout from "@/components/layout/Layout";
+import Landing from "@/pages/Landing";
+import Dashboard from "@/pages/Dashboard";
+import Emergency from "@/pages/Emergency";
+import Kader from "@/pages/Kader";
+import Announcements from "@/pages/Announcements";
+import Location from "@/pages/Location";
+import AdminLogin from "@/pages/AdminLogin";
+import AdminPanel from "@/pages/AdminPanel";
+import { useAuth } from "@/context/AuthContext";
+
+// 1. IMPORT COMPONENT BARU DI SINI
+import Pendidikan from "@/pages/Pendidikan"; 
+import Umkm from "@/pages/Umkm"; // Hilangkan komentar (//) pada baris ini jika file Umkm.jsx sudah Anda buat
+
+function ProtectedRoute({ children }) {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="p-8 text-center text-muted-foreground">Memuat...</div>;
+  if (!user) return <Navigate to="/admin/login" replace />;
+  return children;
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route element={<Layout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/darurat" element={<Emergency />} />
+          <Route path="/kader" element={<Kader />} />
+          <Route path="/pengumuman" element={<Announcements />} />
+          
+          {/* 2. TAMBAHKAN RUTENYA DI SINI */}
+          <Route path="/pendidikan" element={<Pendidikan />} />
+          <Route path="/umkm" element={<Umkm />} /> */ /* Hilangkan komentar pada baris ini jika halaman UMKM sudah ada */
+          
+          <Route path="/lokasi" element={<Location />} />
+          <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;

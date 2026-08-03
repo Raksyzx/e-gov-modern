@@ -1,0 +1,257 @@
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
+import {
+  LayoutDashboard,
+  Siren,
+  Users,
+  Megaphone,
+  Building2, // <-- Ganti MapPin dengan Building2
+  Sun,
+  Moon,
+  Menu,
+  Shield,
+  LogOut,
+  X,
+  BookOpen, // Tambahan ikon Pendidikan
+  Store     // Tambahan ikon UMKM
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useAuth } from "@/context/AuthContext";
+import api from "@/lib/api";
+
+const NAV = [
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, id: "nav-dashboard" },
+  { to: "/darurat", label: "Darurat", icon: Siren, id: "nav-emergency" },
+  { to: "/kader", label: "Kader", icon: Users, id: "nav-kader" },
+  { to: "/pengumuman", label: "Info", icon: Megaphone, id: "nav-announcements" },
+  { to: "/pendidikan", label: "Pendidikan", icon: BookOpen, id: "nav-pendidikan" }, // Menu Pendidikan baru
+  { to: "/umkm", label: "UMKM", icon: Store, id: "nav-umkm" }, // Menu UMKM baru
+  { to: "/lokasi", label: "Profil", icon: Building2, id: "nav-profil" },
+];
+
+function useClock() {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return now;
+}
+
+function useInfo() {
+  const [info, setInfo] = useState(null);
+  useEffect(() => {
+    api.get("/info").then((r) => setInfo(r.data)).catch(() => {});
+  }, []);
+  return info;
+}
+
+function SidebarLinks({ pathname, onNavigate }) {
+  return (
+    <nav className="flex-1 px-3 py-4 space-y-1" data-testid="sidebar-nav">
+      {NAV.map((item) => {
+        const Icon = item.icon;
+        const active = pathname === item.to;
+        return (
+          <Link
+            key={item.to}
+            to={item.to}
+            onClick={onNavigate}
+            data-testid={item.id}
+            className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium min-h-[44px] transition-colors ${
+              active
+                ? "brand-blue shadow-sm"
+                : "text-foreground hover:bg-muted"
+            }`}
+          >
+            <Icon className="h-5 w-5" />
+            <span>{item.label}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+export default function Layout() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
+  const { user, logout } = useAuth();
+  const clock = useClock();
+  const info = useInfo();
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const timeStr = clock.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const dateStr = clock.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+  const closeSheet = () => setSheetOpen(false);
+
+  // Fungsi tambahan untuk menyimpan rute sebelum login
+  const handleLoginClick = () => {
+    localStorage.setItem('jalurKembali', location.pathname);
+  };
+
+  // Fungsi tambahan untuk mengembalikan user ke rute sebelumnya saat logout
+  const handleLogoutClick = () => {
+    logout();
+    const target = localStorage.getItem('jalurKembali') || '/';
+    localStorage.removeItem('jalurKembali');
+    navigate(target);
+  };
+
+  return (
+    <div className="min-h-screen flex bg-background">
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex w-64 flex-col border-r bg-card sticky top-0 h-screen" data-testid="sidebar-desktop">
+        <div className="px-5 py-6 border-b">
+          <div className="flex items-center gap-3">
+            <Link to="/" className="hidden lg:flex items-center gap-3" data-testid="link-landing-sidebar">
+              <div className="w-10 h-10 rounded-lg brand-blue flex items-center justify-center font-display font-bold text-lg">
+                K
+              </div>
+              <div>
+                <div className="font-display font-bold text-sm leading-tight">Kelurahan</div>
+                <div className="text-xs text-muted-foreground leading-tight">{info?.name?.replace("Kelurahan ", "") || "SukaMaju"}</div>
+              </div>
+            </Link>
+          </div>
+        </div>
+        <SidebarLinks pathname={location.pathname} onNavigate={() => {}} />
+        <div className="p-3 border-t">
+          {user ? (
+            <div className="space-y-2">
+              <Link
+                to="/admin"
+                data-testid="nav-admin"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-muted hover:bg-muted/80 min-h-[44px]"
+              >
+                <Shield className="h-4 w-4 text-brand-blue" />
+                Admin Panel
+              </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogoutClick}
+                data-testid="btn-logout"
+                className="w-full justify-start gap-2 min-h-[44px]"
+              >
+                <LogOut className="h-4 w-4" /> Keluar
+              </Button>
+            </div>
+          ) : (
+            <Link to="/admin/login" data-testid="nav-admin-login" onClick={handleLoginClick}>
+              <Button variant="outline" size="sm" className="w-full gap-2 min-h-[44px]">
+                <Shield className="h-4 w-4" /> Login Admin
+              </Button>
+            </Link>
+          )}
+        </div>
+      </aside>
+
+      {/* Main */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <header className="sticky top-0 z-30 border-b bg-card/80 backdrop-blur-md" data-testid="app-header">
+          <div className="flex items-center justify-between px-4 lg:px-8 h-16">
+            <div className="flex items-center gap-3">
+              {/* Mobile menu */}
+              <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="lg:hidden min-h-[44px] min-w-[44px]" data-testid="btn-menu">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-72 p-0 [&>button]:hidden">
+                  <div className="flex items-center justify-between px-5 py-4 border-b">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg brand-blue flex items-center justify-center font-display font-bold">K</div>
+                      <div>
+                        <div className="font-display font-bold text-sm">Kelurahan</div>
+                        <div className="text-xs text-muted-foreground">{info?.name?.replace("Kelurahan ", "") || "SukaMaju"}</div>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={closeSheet}><X className="h-4 w-4" /></Button>
+                  </div>
+                  <SidebarLinks pathname={location.pathname} onNavigate={closeSheet} />
+                  <div className="p-3 border-t">
+                    {user ? (
+                      <>
+                        <Link to="/admin" onClick={closeSheet} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-muted min-h-[44px]">
+                          <Shield className="h-4 w-4 text-brand-blue" /> Admin Panel
+                        </Link>
+                        <Button variant="ghost" size="sm" onClick={() => { closeSheet(); handleLogoutClick(); }} className="w-full justify-start gap-2 min-h-[44px] mt-2">
+                          <LogOut className="h-4 w-4" /> Keluar
+                        </Button>
+                      </>
+                    ) : (
+                      <Link to="/admin/login" onClick={() => { closeSheet(); handleLoginClick(); }}>
+                        <Button variant="outline" className="w-full gap-2 min-h-[44px]"><Shield className="h-4 w-4" /> Login Admin</Button>
+                      </Link>
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
+
+              <Link to="/" className="lg:hidden flex items-center gap-2 cursor-pointer relative z-50">
+                <div className="w-9 h-9 rounded-lg brand-blue flex items-center justify-center font-display font-bold text-sm">K</div>
+                <div className="font-display font-bold text-sm">Kelurahan</div>
+              </Link>
+
+              <div className="hidden md:flex flex-col leading-tight">
+                <div className="text-xs uppercase tracking-widest text-muted-foreground">Portal Warga</div>
+                <div className="font-display font-semibold text-base" data-testid="header-kelurahan-name">{info?.name || "Kelurahan SukaMaju"}</div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 md:gap-4">
+              <div className="text-right hidden sm:block leading-tight">
+                <div className="font-display font-bold tabular-nums text-brand-blue dark:text-primary" data-testid="header-clock">{timeStr}</div>
+                <div className="text-xs text-muted-foreground">{dateStr}</div>
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                data-testid="btn-theme-toggle"
+                className="min-h-[44px] min-w-[44px]"
+              >
+                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 px-4 lg:px-8 py-6 pb-24 lg:pb-8" data-testid="main-content">
+          <Outlet />
+        </main>
+
+        {/* Mobile bottom nav */}
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t bg-card/95 backdrop-blur-md bottom-nav-safe" data-testid="bottom-nav">
+          {/* Diubah menjadi grid-cols-7 agar memuat 7 item menu */}
+          <div className="grid grid-cols-7 overflow-x-auto">
+            {NAV.map((item) => {
+              const Icon = item.icon;
+              const active = location.pathname === item.to;
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  data-testid={`bottom-${item.id}`}
+                  className={`flex flex-col items-center justify-center gap-1 py-2 min-h-[56px] text-xs font-medium ${
+                    active ? "text-brand-blue dark:text-primary" : "text-muted-foreground"
+                  }`}
+                >
+                  <Icon className={`h-5 w-5 ${active ? "" : ""}`} />
+                  <span className="text-[10px] sm:text-xs truncate max-w-[45px] text-center">{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      </div>
+    </div>
+  );
+}

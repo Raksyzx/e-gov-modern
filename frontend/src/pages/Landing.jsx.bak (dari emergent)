@@ -1,0 +1,296 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { ArrowRight, Phone, Mail, Users, Shield, MapPin, Clock, Network } from "lucide-react";
+import api from "@/lib/api";
+import { toAbsoluteUrl } from "@/components/Uploader";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+
+function useClock() {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return now;
+}
+
+function PengurusNode({ p, size = "md" }) {
+  const sizes = {
+    sm: { avatar: "h-14 w-14", text: "text-xs", name: "text-sm" },
+    md: { avatar: "h-16 w-16", text: "text-xs", name: "text-sm" },
+    lg: { avatar: "h-20 w-20", text: "text-xs", name: "text-base" },
+  }[size];
+  return (
+    <div className="flex flex-col items-center text-center px-3 py-4 rounded-xl bg-card border shadow-sm min-w-[160px]" data-testid={`org-node-${p.id}`}>
+      <Avatar className={`${sizes.avatar} border-2 border-secondary/40 mb-2`}>
+        <AvatarImage src={toAbsoluteUrl(p.photo_url)} alt={p.name} />
+        <AvatarFallback className="brand-green font-display">{p.name.charAt(0)}</AvatarFallback>
+      </Avatar>
+      <div className={`${sizes.text} uppercase tracking-widest text-brand-green font-semibold`}>{p.position}</div>
+      <div className={`${sizes.name} font-display font-semibold leading-tight mt-1`}>{p.name}</div>
+    </div>
+  );
+}
+
+export default function Landing() {
+  const [pengurus, setPengurus] = useState([]);
+  const [info, setInfo] = useState(null);
+  const clock = useClock();
+
+  useEffect(() => {
+    api.get("/pengurus").then((r) => setPengurus(r.data));
+    api.get("/info").then((r) => setInfo(r.data));
+  }, []);
+
+  const lurah = pengurus.find((p) => p.position?.toLowerCase() === "lurah");
+  const sekretaris = pengurus.find((p) => p.position?.toLowerCase().includes("sekretaris"));
+  const kasi = pengurus.filter((p) => p.position?.toLowerCase().startsWith("kasi"));
+  const others = pengurus.filter((p) => p.id !== lurah?.id);
+
+  const heroBg = toAbsoluteUrl(info?.hero_bg_url) || "https://images.unsplash.com/photo-1580537659466-0a9bfa916a54?auto=format&fit=crop&w=1920&q=80";
+  const tagline = info?.hero_tagline || "Melayani masyarakat dengan dedikasi, membangun daerah yang maju dan sejahtera bersama-sama";
+
+  return (
+    <div className="min-h-screen bg-background" data-testid="landing-page">
+      {/* Top nav */}
+      <header className="absolute top-0 left-0 right-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-white/95 text-brand-blue flex items-center justify-center font-display font-bold text-lg backdrop-blur-sm">K</div>
+            <div className="leading-tight text-white drop-shadow">
+              <div className="font-display font-bold text-sm">Portal Warga</div>
+              <div className="text-xs opacity-90">{info?.name || "Kelurahan Sukamaju"}</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="hidden md:block text-right leading-tight text-white drop-shadow">
+              <div className="font-display font-bold tabular-nums text-sm" data-testid="landing-clock">
+                {clock.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+              </div>
+              <div className="text-xs opacity-90">
+                {clock.toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" })}
+              </div>
+            </div>
+            <Link to="/dashboard" data-testid="btn-enter-dashboard">
+              <Button className="bg-white text-brand-blue hover:bg-white/90 gap-2 min-h-[44px] font-semibold shadow-lg">
+                Masuk Dashboard <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero with photo background */}
+      <section
+        className="relative min-h-[92vh] flex items-center justify-center overflow-hidden"
+        data-testid="hero-section"
+      >
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url("${heroBg}")` }}
+        />
+        {/* Green tinted overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#065f46]/70 via-[#047857]/70 to-[#064e3b]/85" />
+        <div className="absolute inset-0 bg-black/25" />
+
+        <div className="relative max-w-5xl mx-auto px-4 lg:px-8 text-center py-24 md:py-32">
+          <h1 className="font-display font-bold text-white text-4xl md:text-6xl lg:text-7xl leading-[1.05] tracking-tight drop-shadow-lg" data-testid="landing-title">
+            Selamat Datang di Website
+            <br />
+            <span className="text-emerald-200">{info?.name || "Kelurahan Sukamaju"}</span>
+          </h1>
+          <p className="text-white/90 text-lg md:text-xl mt-6 max-w-3xl mx-auto leading-relaxed drop-shadow">
+            {tagline}
+          </p>
+          <div className="flex flex-wrap gap-3 mt-10 justify-center">
+            <Link to="/dashboard" data-testid="btn-hero-enter">
+              <Button size="lg" className="bg-white text-emerald-800 hover:bg-white/95 gap-2 min-h-[56px] font-semibold text-base px-8 shadow-xl">
+                Buka Dashboard <ArrowRight className="h-5 w-5" />
+              </Button>
+            </Link>
+            <Link to="/darurat" data-testid="btn-hero-emergency">
+              <Button size="lg" variant="outline" className="gap-2 min-h-[56px] bg-transparent border-2 border-white text-white hover:bg-white/10 font-semibold text-base px-8">
+                Kontak Darurat
+              </Button>
+            </Link>
+          </div>
+
+          {/* Stats strip */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 mt-16 max-w-4xl mx-auto">
+            {[
+              { label: "KK", value: info?.total_kk?.toLocaleString("id-ID"), key: "kk" },
+              { label: "Penduduk", value: info?.total_penduduk?.toLocaleString("id-ID"), key: "penduduk" },
+              { label: "RT", value: info?.total_rt, key: "rt" },
+              { label: "RW", value: info?.total_rw, key: "rw" },
+              { label: "Kader", value: info?.total_kader, key: "kader" },
+            ].map((s) => (
+              <div key={s.key} className="text-white text-center backdrop-blur-sm bg-white/10 border border-white/20 rounded-xl py-4 px-2" data-testid={`hero-stat-${s.key}`}>
+                <div className="font-display font-bold text-2xl md:text-3xl tabular-nums drop-shadow">{s.value ?? "-"}</div>
+                <div className="text-xs uppercase tracking-widest opacity-90 mt-1">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Lurah spotlight */}
+      {lurah && (
+        <section className="max-w-7xl mx-auto px-4 lg:px-8 py-14 md:py-20">
+          <Card className="overflow-hidden border-2 border-primary/20 shadow-lg" data-testid="lurah-card">
+            <div className="brand-blue h-2" />
+            <CardContent className="p-6 md:p-10">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-center">
+                <div className="flex justify-center md:justify-start">
+                  <Avatar className="h-32 w-32 md:h-40 md:w-40 border-4 border-primary/20">
+                    <AvatarImage src={toAbsoluteUrl(lurah.photo_url)} alt={lurah.name} />
+                    <AvatarFallback className="brand-blue font-display text-3xl">{lurah.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                </div>
+                <div className="md:col-span-3">
+                  <div className="text-xs uppercase tracking-widest text-brand-blue font-semibold">Sambutan {lurah.position}</div>
+                  <h2 className="font-display font-bold text-2xl md:text-3xl mt-1">{lurah.name}</h2>
+                  {lurah.bio && <p className="text-muted-foreground mt-3">{lurah.bio}</p>}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {lurah.phone && (
+                      <a href={`tel:${lurah.phone}`} className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-muted hover:bg-muted/70">
+                        <Phone className="h-3 w-3" /> {lurah.phone}
+                      </a>
+                    )}
+                    {lurah.email && (
+                      <a href={`mailto:${lurah.email}`} className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-muted hover:bg-muted/70">
+                        <Mail className="h-3 w-3" /> {lurah.email}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      )}
+
+      {/* Organization chart */}
+      <section className="border-t bg-muted/30" data-testid="org-chart-section">
+        <div className="max-w-7xl mx-auto px-4 lg:px-8 py-14 md:py-20">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-brand-blue mb-2">
+              <Network className="h-4 w-4" /> Struktur Organisasi
+            </div>
+            <h2 className="font-display font-bold text-3xl md:text-4xl tracking-tight">Hierarki Pengurus Kelurahan</h2>
+          </div>
+
+          <div className="flex flex-col items-center gap-0" data-testid="org-tree">
+            {lurah && <PengurusNode p={lurah} size="lg" />}
+            {sekretaris && (
+              <>
+                <div className="w-px h-8 bg-border" />
+                <PengurusNode p={sekretaris} size="md" />
+              </>
+            )}
+            {kasi.length > 0 && (
+              <>
+                <div className="w-px h-8 bg-border" />
+                <div className="relative w-full flex justify-center">
+                  <div className="absolute top-0 h-px bg-border" style={{ left: "10%", right: "10%" }} />
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 w-full max-w-5xl pt-8 relative">
+                  {kasi.map((k) => (
+                    <div key={k.id} className="flex flex-col items-center relative">
+                      <div className="absolute -top-8 w-px h-8 bg-border" />
+                      <PengurusNode p={k} size="sm" />
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Pengurus grid */}
+      <section className="max-w-7xl mx-auto px-4 lg:px-8 py-14 md:py-20" data-testid="pengurus-section">
+        <div className="flex items-end justify-between flex-wrap gap-4 mb-8">
+          <div>
+            <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-brand-green mb-2">
+              <Users className="h-4 w-4" /> Kontak Pengurus
+            </div>
+            <h2 className="font-display font-bold text-3xl md:text-4xl tracking-tight">Direktori Pengurus</h2>
+            <p className="text-muted-foreground mt-2 max-w-xl">Klik kontak untuk terhubung langsung dengan pengurus kelurahan.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" data-testid="pengurus-grid">
+          {others.map((p) => (
+            <Card key={p.id} className="overflow-hidden card-hover" data-testid={`pengurus-card-${p.id}`}>
+              <div className="brand-green h-1" />
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <Avatar className="h-20 w-20 border-2 border-secondary/30 shrink-0">
+                    <AvatarImage src={toAbsoluteUrl(p.photo_url)} alt={p.name} />
+                    <AvatarFallback className="brand-green font-display text-xl">{p.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] uppercase tracking-widest text-brand-green font-semibold">{p.position}</div>
+                    <div className="font-display font-semibold text-base leading-tight mt-0.5">{p.name}</div>
+                  </div>
+                </div>
+                {p.bio && <p className="text-sm text-muted-foreground mt-3 line-clamp-2">{p.bio}</p>}
+                <div className="mt-4 flex flex-col gap-1.5">
+                  {p.phone && <a href={`tel:${p.phone}`} className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"><Phone className="h-3 w-3" /> {p.phone}</a>}
+                  {p.email && <a href={`mailto:${p.email}`} className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground truncate"><Mail className="h-3 w-3 shrink-0" /> {p.email}</a>}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* Quick access */}
+      <section className="border-t bg-muted/40">
+        <div className="max-w-7xl mx-auto px-4 lg:px-8 py-14">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Link to="/darurat" className="group" data-testid="quick-emergency">
+              <Card className="card-hover h-full border-l-4 border-l-red-600">
+                <CardContent className="p-6">
+                  <Shield className="h-8 w-8 text-brand-red mb-3" />
+                  <h3 className="font-display font-semibold text-lg">Kontak Darurat</h3>
+                  <p className="text-sm text-muted-foreground mt-1">RT/RW, Ambulans, Damkar, Polsek, Puskesmas dengan status realtime.</p>
+                  <div className="mt-3 text-sm font-medium text-brand-red inline-flex items-center gap-1 group-hover:gap-2 transition-all">Buka <ArrowRight className="h-4 w-4" /></div>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link to="/kader" className="group" data-testid="quick-kader">
+              <Card className="card-hover h-full border-l-4 border-l-emerald-600">
+                <CardContent className="p-6">
+                  <Users className="h-8 w-8 text-brand-green mb-3" />
+                  <h3 className="font-display font-semibold text-lg">Kader Kelurahan</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Posyandu, PKK, Linmas — jadwal & kontak.</p>
+                  <div className="mt-3 text-sm font-medium text-brand-green inline-flex items-center gap-1 group-hover:gap-2 transition-all">Buka <ArrowRight className="h-4 w-4" /></div>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link to="/lokasi" className="group" data-testid="quick-location">
+              <Card className="card-hover h-full border-l-4 border-l-orange-500">
+                <CardContent className="p-6">
+                  <MapPin className="h-8 w-8 text-brand-orange mb-3" />
+                  <h3 className="font-display font-semibold text-lg">Lokasi & Jam Layanan</h3>
+                  <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Sen-Jum 08.00-16.00</p>
+                  <div className="mt-3 text-sm font-medium text-brand-orange inline-flex items-center gap-1 group-hover:gap-2 transition-all">Buka <ArrowRight className="h-4 w-4" /></div>
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <footer className="border-t bg-card">
+        <div className="max-w-7xl mx-auto px-4 lg:px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-3">
+          <div className="text-xs text-muted-foreground">© {new Date().getFullYear()} {info?.name || "Kelurahan Sukamaju"}. Portal resmi warga.</div>
+          <Link to="/admin/login" className="text-xs text-muted-foreground hover:text-foreground" data-testid="footer-admin-login">Login Admin</Link>
+        </div>
+      </footer>
+    </div>
+  );
+}

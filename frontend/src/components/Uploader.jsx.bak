@@ -1,0 +1,122 @@
+import { useRef, useState } from "react";
+import { Upload, Loader2, X } from "lucide-react";
+import { toast } from "sonner";
+import imageCompression from "browser-image-compression";
+import { API_BASE } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+
+export function toAbsoluteUrl(url) {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  if (url.startsWith("/api/")) return `${BACKEND_URL}${url}`;
+  return url;
+}
+
+export default function Uploader({ value, onChange, label = "Upload gambar", testid = "uploader" }) {
+  const inputRef = useRef(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressLabel, setProgressLabel] = useState("");
+
+  const uploadXHR = (formData) => new Promise((resolve, reject) => {
+    const token = localStorage.getItem("kel_token");
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${API_BASE}/upload`);
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        const pct = 50 + Math.round((e.loaded / e.total) * 50); // upload = 50-100%
+        setProgress(pct);
+        setProgressLabel(`Mengunggah ${pct}%`);
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText));
+      else reject(new Error(`Upload gagal (${xhr.status})`));
+    };
+    xhr.onerror = () => reject(new Error("Koneksi terputus"));
+    xhr.send(formData);
+  });
+
+  const upload = async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Hanya file gambar yang diizinkan"); return; }
+    setLoading(true);
+    setProgress(0);
+    setProgressLabel("Mengompresi...");
+    try {
+      const originalKB = Math.round(file.size / 1024);
+      const compressed = await imageCompression(file, {
+        maxSizeMB: 0.6, maxWidthOrHeight: 1600, useWebWorker: true, fileType: "image/jpeg",
+        onProgress: (p) => { setProgress(Math.round(p * 0.5)); setProgressLabel(`Mengompresi ${Math.round(p)}%`); },
+      });
+      const compressedKB = Math.round(compressed.size / 1024);
+      setProgress(50);
+      setProgressLabel(`Mengunggah (${compressedKB}KB, hemat ${Math.max(0, originalKB - compressedKB)}KB)...`);
+
+      const fd = new FormData();
+      const outName = (file.name || "image").replace(/\.[^.]+$/, "") + ".jpg";
+      fd.append("file", compressed, outName);
+      if (value) fd.append("replace_path", value);
+
+      const data = await uploadXHR(fd);
+      setProgress(100);
+      onChange(data.url);
+      toast.success(`Gambar terunggah (${compressedKB}KB)`);
+    } catch (e) {
+      toast.error(e.message || "Upload gagal");
+    } finally {
+      setTimeout(() => { setLoading(false); setProgress(0); setProgressLabel(""); }, 300);
+    }
+  };
+
+  const onDrop = (e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) upload(f); };
+  const preview = toAbsoluteUrl(value);
+
+  return (
+    <div className="space-y-2" data-testid={testid}>
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={onDrop}
+        onClick={() => !loading && inputRef.current?.click()}
+        className={`relative cursor-pointer border-2 border-dashed rounded-lg p-6 text-center transition-colors ${dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"} ${loading ? "opacity-90 pointer-events-none" : ""}`}
+      >
+        {loading ? (
+          <div className="space-y-3 py-2" data-testid={`${testid}-progress`}>
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> {progressLabel}
+            </div>
+            <Progress value={progress} className="h-2" />
+            <div className="text-xs tabular-nums text-muted-foreground">{progress}%</div>
+          </div>
+        ) : preview ? (
+          <div className="flex items-center gap-3">
+            <img src={preview} alt="preview" className="h-20 w-20 object-cover rounded-md border" />
+            <div className="text-left flex-1 min-w-0">
+              <div className="text-sm font-medium truncate">Gambar terpilih</div>
+              <div className="text-xs text-muted-foreground">Klik atau seret file baru untuk mengganti (foto lama otomatis dihapus)</div>
+            </div>
+            <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); onChange(""); }} data-testid={`${testid}-clear`}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground py-2">
+            <Upload className="h-6 w-6" />
+            <div><span className="font-semibold text-foreground">Klik untuk pilih</span> atau seret file di sini</div>
+            <div className="text-xs">Otomatis dikompresi (max ~600KB, 1600px)</div>
+          </div>
+        )}
+        <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => upload(e.target.files?.[0])} data-testid={`${testid}-input`} />
+      </div>
+      {value && !loading && (
+        <div className="text-xs text-muted-foreground"><span className="font-medium">{label}:</span> <span className="font-mono break-all">{value}</span></div>
+      )}
+    </div>
+  );
+}

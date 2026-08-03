@@ -1,0 +1,99 @@
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Shield, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useAuth } from "@/context/AuthContext";
+
+export default function AdminLogin() {
+  // Nilai awal dikosongkan agar tidak terisi otomatis saat pertama kali dibuka
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await login(email, password);
+      toast.success("Login berhasil");
+      navigate("/admin");
+    } catch (err) {
+      // Menggunakan pesan error langsung dari Supabase
+      toast.error(err.message || "Terjadi kesalahan saat login");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4" data-testid="admin-login-page">
+      <div className="w-full max-w-md">
+        <button 
+  onClick={() => navigate(-1)} 
+  className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6 bg-transparent border-none p-0 cursor-pointer" 
+  data-testid="btn-back"
+>
+  <ArrowLeft className="h-4 w-4" /> Kembali
+</button>
+        <Card>
+          <CardContent className="p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-xl brand-blue flex items-center justify-center">
+                <Shield className="h-6 w-6" />
+              </div>
+              <div>
+                <h1 className="font-display font-bold text-xl">Login Admin</h1>
+                <p className="text-xs text-muted-foreground">Panel pengelolaan konten kelurahan</p>
+              </div>
+            </div>
+            <form onSubmit={submit} className="space-y-4">
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="min-h-[44px] mt-1"
+                  placeholder="Masukkan email admin" 
+                  data-testid="input-email"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="min-h-[44px] mt-1"
+                  placeholder="Masukkan password admin"
+                  data-testid="input-password"
+                  required
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full brand-blue hover:brightness-90 min-h-[44px] font-semibold"
+                data-testid="btn-login"
+              >
+                {loading ? "Memuat..." : "Masuk"}
+              </Button>
+            </form>
+            <div className="mt-4 text-xs text-muted-foreground text-center">
+             
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

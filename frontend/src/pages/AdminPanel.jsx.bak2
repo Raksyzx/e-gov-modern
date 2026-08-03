@@ -1,0 +1,567 @@
+import { useEffect, useState } from "react";
+import { Plus, Trash2, Shield, Pencil, GripVertical, ExternalLink, Monitor, Tablet, Smartphone, Send, RotateCcw, AlertCircle, History, User } from "lucide-react";
+import { toast } from "sonner";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { supabase } from "@/lib/supabaseClient"; // Menggunakan Supabase Client, bukan API Axios lama
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import Uploader from "@/components/Uploader";
+
+const EMPTY_CONTACT = {
+  category: "emergency", subcategory: "rt_rw", name: "", role: "", phone: "",
+  whatsapp: "", wilayah: "", status: "available", schedule: "", notes: "", photo_url: "",
+};
+const EMPTY_PENGURUS = { name: "", position: "", photo_url: "", phone: "", email: "", bio: "", order: 0 };
+
+function ContactForm({ initial, onSubmit }) {
+  const [f, setF] = useState(initial || EMPTY_CONTACT);
+  const update = (k, v) => setF({ ...f, [k]: v });
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <div>
+        <Label>Kategori</Label>
+        <Select value={f.category} onValueChange={(v) => update("category", v)}>
+          <SelectTrigger data-testid="input-contact-category"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="emergency">Darurat</SelectItem>
+            <SelectItem value="kader">Kader</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div><Label>Sub-kategori</Label><Input value={f.subcategory} onChange={(e) => update("subcategory", e.target.value)} data-testid="input-contact-subcategory" placeholder="rt_rw / ambulan / posyandu ..." /></div>
+      <div className="col-span-2"><Label>Nama</Label><Input value={f.name} onChange={(e) => update("name", e.target.value)} data-testid="input-contact-name" /></div>
+      <div className="col-span-2"><Label>Jabatan / Role</Label><Input value={f.role} onChange={(e) => update("role", e.target.value)} data-testid="input-contact-role" /></div>
+      <div><Label>Telepon</Label><Input value={f.phone} onChange={(e) => update("phone", e.target.value)} data-testid="input-contact-phone" /></div>
+      <div><Label>WhatsApp</Label><Input value={f.whatsapp} onChange={(e) => update("whatsapp", e.target.value)} placeholder="628..." data-testid="input-contact-wa" /></div>
+      <div><Label>Wilayah</Label><Input value={f.wilayah} onChange={(e) => update("wilayah", e.target.value)} data-testid="input-contact-wilayah" /></div>
+      <div>
+        <Label>Status</Label>
+        <Select value={f.status} onValueChange={(v) => update("status", v)}>
+          <SelectTrigger data-testid="input-contact-status"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="available">Siap</SelectItem>
+            <SelectItem value="busy">Sibuk</SelectItem>
+            <SelectItem value="offline">Offline</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="col-span-2"><Label>Jadwal</Label><Input value={f.schedule || ""} onChange={(e) => update("schedule", e.target.value)} /></div>
+      <div className="col-span-2"><Label>URL Foto</Label><Input value={f.photo_url || ""} onChange={(e) => update("photo_url", e.target.value)} /></div>
+      <div className="col-span-2"><Label>Catatan</Label><Textarea value={f.notes || ""} onChange={(e) => update("notes", e.target.value)} /></div>
+      <div className="col-span-2 flex justify-end">
+        <Button onClick={() => onSubmit(f)} className="brand-blue hover:brightness-90" data-testid="btn-save-contact">Simpan</Button>
+      </div>
+    </div>
+  );
+}
+
+function PengurusForm({ initial, onSubmit }) {
+  const [f, setF] = useState(initial || EMPTY_PENGURUS);
+  const update = (k, v) => setF({ ...f, [k]: v });
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <div className="col-span-2"><Label>Nama Lengkap</Label><Input value={f.name} onChange={(e) => update("name", e.target.value)} data-testid="input-pengurus-name" /></div>
+      <div><Label>Jabatan</Label><Input value={f.position} onChange={(e) => update("position", e.target.value)} placeholder="Lurah / Sekretaris / Kasi ..." data-testid="input-pengurus-position" /></div>
+      <div><Label>Urutan Tampil</Label><Input type="number" value={f.order} onChange={(e) => update("order", parseInt(e.target.value || "0"))} data-testid="input-pengurus-order" /></div>
+      <div className="col-span-2"><Label>Foto</Label><Uploader value={f.photo_url} onChange={(v) => update("photo_url", v)} label="Foto Pengurus" testid="uploader-pengurus" /></div>
+      <div><Label>Telepon</Label><Input value={f.phone || ""} onChange={(e) => update("phone", e.target.value)} data-testid="input-pengurus-phone" /></div>
+      <div><Label>Email</Label><Input value={f.email || ""} onChange={(e) => update("email", e.target.value)} data-testid="input-pengurus-email" /></div>
+      <div className="col-span-2"><Label>NIP</Label><Textarea value={f.bio || ""} onChange={(e) => update("bio", e.target.value)} rows={3} data-testid="input-pengurus-bio" /></div>
+      <div className="col-span-2 flex justify-end">
+        <Button onClick={() => onSubmit(f)} className="brand-blue hover:brightness-90" data-testid="btn-save-pengurus">Simpan</Button>
+      </div>
+    </div>
+  );
+}
+
+function SortablePengurusRow({ p, onEdit, onDelete }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: p.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  return (
+    <div ref={setNodeRef} style={style} className="p-4 flex items-center justify-between gap-4 border-b bg-card" data-testid={`admin-pengurus-${p.id}`}>
+      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground p-1" data-testid={`drag-pengurus-${p.id}`}>
+        <GripVertical className="h-5 w-5" />
+      </button>
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <Avatar className="h-10 w-10"><AvatarImage src={p.photo_url} /><AvatarFallback className="brand-green">{p.name ? p.name.charAt(0) : "P"}</AvatarFallback></Avatar>
+        <div className="min-w-0">
+          <div className="font-semibold truncate">{p.name}</div>
+          <div className="text-xs text-muted-foreground">{p.position} · #{p.order}</div>
+        </div>
+      </div>
+      <div className="flex gap-1">
+        <Button size="icon" variant="ghost" onClick={() => onEdit(p)} data-testid={`btn-edit-pengurus-${p.id}`}><Pencil className="h-4 w-4" /></Button>
+        <Button size="icon" variant="ghost" onClick={() => onDelete(p.id)} data-testid={`btn-del-pengurus-${p.id}`}><Trash2 className="h-4 w-4 text-brand-red" /></Button>
+      </div>
+    </div>
+  );
+}
+
+function SortablePengurus({ items, onReorder, onEdit, onDelete }) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const handleEnd = (e) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIdx = items.findIndex((i) => i.id === active.id);
+    const newIdx = items.findIndex((i) => i.id === over.id);
+    onReorder(arrayMove(items, oldIdx, newIdx));
+  };
+  return (
+    <Card><CardContent className="p-0">
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleEnd}>
+        <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+          {items.map((p) => <SortablePengurusRow key={p.id} p={p} onEdit={onEdit} onDelete={onDelete} />)}
+        </SortableContext>
+      </DndContext>
+    </CardContent></Card>
+  );
+}
+
+export default function AdminPanel() {
+  const [contacts, setContacts] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
+  const [agenda, setAgenda] = useState([]);
+  const [pengurus, setPengurus] = useState([]);
+  const [info, setInfo] = useState(null);
+  const [editingContact, setEditingContact] = useState(null);
+  const [editingPengurus, setEditingPengurus] = useState(null);
+  const [openContact, setOpenContact] = useState(false);
+  const [openPengurus, setOpenPengurus] = useState(false);
+  const [openAnn, setOpenAnn] = useState(false);
+  const [openAg, setOpenAg] = useState(false);
+  const [annForm, setAnnForm] = useState({ title: "", body: "", priority: "normal" });
+  const [agForm, setAgForm] = useState({ title: "", date: "", time: "", location: "", description: "" });
+  const [previewMode, setPreviewMode] = useState("desktop");
+  const previewWidths = { desktop: "100%", tablet: "768px", mobile: "390px" };
+  const [hasDraft, setHasDraft] = useState(false);
+  const [publishLog, setPublishLog] = useState([]);
+
+  const load = async () => {
+    try {
+      const [cRes, aRes, gRes, pRes, iRes, logRes] = await Promise.all([
+        supabase.from("contacts").select("*").order("id", { ascending: false }),
+        supabase.from("announcements").select("*").order("id", { ascending: false }),
+        supabase.from("agenda").select("*").order("id", { ascending: false }),
+        supabase.from("pengurus").select("*").order("order", { ascending: true }),
+        supabase.from("info").select("*").eq("id", 1).maybeSingle(),
+        supabase.from("publish_log").select("*").order("published_at", { ascending: false }),
+      ]);
+
+      if (cRes.data) setContacts(cRes.data);
+      if (aRes.data) setAnnouncements(aRes.data);
+      if (gRes.data) setAgenda(gRes.data);
+      if (pRes.data) setPengurus(pRes.data);
+      if (iRes.data) {
+        setInfo(iRes.data);
+        setHasDraft(iRes.data.has_draft);
+      }
+      if (logRes.data) setPublishLog(logRes.data);
+    } catch (err) {
+      toast.error("Gagal memuat data dari database");
+    }
+  };
+  useEffect(() => { load(); }, []);
+
+  const saveContact = async (payload) => {
+    try {
+      if (editingContact) {
+        const { error } = await supabase.from("contacts").update(payload).eq("id", editingContact.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("contacts").insert([payload]);
+        if (error) throw error;
+      }
+      toast.success("Kontak tersimpan");
+      setOpenContact(false); setEditingContact(null); load();
+    } catch (e) { toast.error(e.message || "Gagal menyimpan kontak"); }
+  };
+
+  const delContact = async (id) => {
+    if (!window.confirm("Hapus kontak ini?")) return;
+    try {
+      const { error } = await supabase.from("contacts").delete().eq("id", id);
+      if (error) throw error;
+      toast.success("Terhapus"); load();
+    } catch (e) { toast.error(e.message || "Gagal menghapus"); }
+  };
+
+  const savePengurus = async (payload) => {
+    try {
+      if (editingPengurus) {
+        const { error } = await supabase.from("pengurus").update(payload).eq("id", editingPengurus.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("pengurus").insert([payload]);
+        if (error) throw error;
+      }
+      toast.success("Pengurus tersimpan");
+      setOpenPengurus(false); setEditingPengurus(null); load();
+    } catch (e) { toast.error(e.message || "Gagal menyimpan data pengurus"); }
+  };
+
+  const delPengurus = async (id) => {
+    if (!window.confirm("Hapus pengurus ini?")) return;
+    try {
+      const { error } = await supabase.from("pengurus").delete().eq("id", id);
+      if (error) throw error;
+      toast.success("Terhapus"); load();
+    } catch (e) { toast.error(e.message || "Gagal menghapus"); }
+  };
+
+  const reorderPengurus = async (newList) => {
+    setPengurus(newList);
+    try {
+      for (let i = 0; i < newList.length; i++) {
+        await supabase.from("pengurus").update({ order: i }).eq("id", newList[i].id);
+      }
+      toast.success("Urutan diperbarui");
+      load();
+    } catch (e) { toast.error("Gagal menyusun ulang urutan"); load(); }
+  };
+
+  const saveInfo = async () => {
+    try {
+      const updatedInfo = { ...info, has_draft: true, is_draft: true };
+      const { error } = await supabase.from("info").update(updatedInfo).eq("id", 1);
+      if (error) throw error;
+      toast.success("Draft tersimpan — belum tayang publik. Klik Publish untuk merilis.");
+      load();
+    } catch (e) { toast.error(e.message || "Gagal menyimpan draft"); }
+  };
+
+  const publishInfo = async () => {
+    if (!window.confirm("Publish perubahan sekarang? Konten akan langsung tayang ke publik.")) return;
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const userEmail = userData?.user?.email || "admin@kelurahan.id";
+
+      const { error: infoErr } = await supabase.from("info").update({ has_draft: false, is_draft: false }).eq("id", 1);
+      if (infoErr) throw infoErr;
+
+      const { error: logErr } = await supabase.from("publish_log").insert([
+        { user_email: userEmail, changed_fields: ["STATISTIK", "PROFIL", "HERO"] }
+      ]);
+      if (logErr) throw logErr;
+
+      toast.success("Konten dipublikasikan");
+      const f = document.getElementById("landing-preview-frame");
+      if (f) f.src = `/?t=${Date.now()}`;
+      load();
+    } catch (e) { toast.error(e.message || "Gagal mempublikasikan konten"); }
+  };
+
+  const discardDraft = async () => {
+    if (!window.confirm("Batalkan semua perubahan draft dan kembali ke versi tayang?")) return;
+    try {
+      const { error } = await supabase.from("info").update({ has_draft: false, is_draft: false }).eq("id", 1);
+      if (error) throw error;
+      toast.success("Draft dibatalkan");
+      load();
+    } catch (e) { toast.error(e.message || "Gagal membatalkan draft"); }
+  };
+
+  const addAnn = async () => {
+    try {
+      const { error } = await supabase.from("announcements").insert([annForm]);
+      if (error) throw error;
+      toast.success("Pengumuman ditambahkan");
+      setAnnForm({ title: "", body: "", priority: "normal" });
+      setOpenAnn(false); load();
+    } catch (e) { toast.error(e.message || "Gagal menambahkan pengumuman"); }
+  };
+
+  const delAnn = async (id) => {
+    if (!window.confirm("Hapus pengumuman?")) return;
+    try {
+      const { error } = await supabase.from("announcements").delete().eq("id", id);
+      if (error) throw error;
+      load();
+    } catch (e) { toast.error(e.message || "Gagal menghapus pengumuman"); }
+  };
+
+  const addAg = async () => {
+    try {
+      const { error } = await supabase.from("agenda").insert([agForm]);
+      if (error) throw error;
+      toast.success("Agenda ditambahkan");
+      setAgForm({ title: "", date: "", time: "", location: "", description: "" });
+      setOpenAg(false); load();
+    } catch (e) { toast.error(e.message || "Gagal menambahkan agenda"); }
+  };
+
+  const delAg = async (id) => {
+    if (!window.confirm("Hapus agenda?")) return;
+    try {
+      const { error } = await supabase.from("agenda").delete().eq("id", id);
+      if (error) throw error;
+      load();
+    } catch (e) { toast.error(e.message || "Gagal menghapus agenda"); }
+  };
+
+  return (
+    <div className="space-y-6" data-testid="admin-panel-page">
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 rounded-xl brand-blue flex items-center justify-center"><Shield className="h-6 w-6" /></div>
+        <div>
+          <h1 className="font-display font-bold text-3xl">Admin Panel</h1>
+          <p className="text-sm text-muted-foreground">Kelola konten portal warga</p>
+        </div>
+      </div>
+
+      <Tabs defaultValue="info">
+        <TabsList data-testid="admin-tabs" className="overflow-x-auto">
+          <TabsTrigger value="info" data-testid="tab-info">Info & Statistik</TabsTrigger>
+          <TabsTrigger value="pengurus" data-testid="tab-pengurus">Pengurus ({pengurus.length})</TabsTrigger>
+          <TabsTrigger value="contacts" data-testid="tab-contacts">Kontak ({contacts.length})</TabsTrigger>
+          <TabsTrigger value="announcements" data-testid="tab-announcements">Pengumuman ({announcements.length})</TabsTrigger>
+          <TabsTrigger value="agenda" data-testid="tab-agenda">Agenda ({agenda.length})</TabsTrigger>
+          <TabsTrigger value="preview" data-testid="tab-preview">Preview Landing</TabsTrigger>
+        </TabsList>
+
+        {/* INFO TAB */}
+        <TabsContent value="info" className="mt-4">
+          {info && (
+            <Card><CardContent className="p-6 space-y-4">
+              <h3 className="font-display font-semibold text-lg">Statistik Kelurahan</h3>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div><Label>Total KK</Label><Input type="number" value={info.total_kk || 0} onChange={(e) => setInfo({ ...info, total_kk: parseInt(e.target.value || "0") })} data-testid="input-info-kk" /></div>
+                <div><Label>Total Penduduk</Label><Input type="number" value={info.total_penduduk || 0} onChange={(e) => setInfo({ ...info, total_penduduk: parseInt(e.target.value || "0") })} data-testid="input-info-penduduk" /></div>
+                <div><Label>Total RT</Label><Input type="number" value={info.total_rt || 0} onChange={(e) => setInfo({ ...info, total_rt: parseInt(e.target.value || "0") })} data-testid="input-info-rt" /></div>
+                <div><Label>Total RW</Label><Input type="number" value={info.total_rw || 0} onChange={(e) => setInfo({ ...info, total_rw: parseInt(e.target.value || "0") })} data-testid="input-info-rw" /></div>
+                <div><Label>Total Kader</Label><Input type="number" value={info.total_kader || 0} onChange={(e) => setInfo({ ...info, total_kader: parseInt(e.target.value || "0") })} data-testid="input-info-kader" /></div>
+              </div>
+              <h3 className="font-display font-semibold text-lg pt-4">Profil Kelurahan</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div><Label>Nama Kelurahan</Label><Input value={info.name || ""} onChange={(e) => setInfo({ ...info, name: e.target.value })} data-testid="input-info-name" /></div>
+                <div><Label>Wilayah (Kecamatan/Kota)</Label><Input value={info.wilayah || ""} onChange={(e) => setInfo({ ...info, wilayah: e.target.value })} data-testid="input-info-wilayah" /></div>
+                <div className="md:col-span-2"><Label>Alamat</Label><Input value={info.address || ""} onChange={(e) => setInfo({ ...info, address: e.target.value })} data-testid="input-info-address" /></div>
+                <div className="md:col-span-2"><Label>Jam Operasional</Label><Input value={info.office_hours || ""} onChange={(e) => setInfo({ ...info, office_hours: e.target.value })} data-testid="input-info-hours" /></div>
+              </div>
+              <h3 className="font-display font-semibold text-lg pt-4">Tampilan Landing Page</h3>
+              <div className="space-y-3">
+                <div><Label>Foto Background Landing</Label><Uploader value={info.hero_bg_url || ""} onChange={(v) => setInfo({ ...info, hero_bg_url: v })} label="Background Hero" testid="uploader-hero" /></div>
+                <div><Label>Tagline Hero</Label><Textarea value={info.hero_tagline || ""} onChange={(e) => setInfo({ ...info, hero_tagline: e.target.value })} rows={2} data-testid="input-info-tagline" /></div>
+              </div>
+              <div className="flex justify-between items-center pt-2 gap-2 flex-wrap" data-testid="draft-actions">
+                <div className="text-xs">
+                  {hasDraft ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full brand-orange text-xs font-semibold" data-testid="draft-badge">
+                      <AlertCircle className="h-3 w-3" /> Ada perubahan draft belum dipublikasikan
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">Semua perubahan sudah tayang.</span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  {hasDraft && (
+                    <Button variant="outline" onClick={discardDraft} className="gap-1" data-testid="btn-discard-draft">
+                      <RotateCcw className="h-4 w-4" /> Batalkan Draft
+                    </Button>
+                  )}
+                  <Button onClick={saveInfo} variant="outline" data-testid="btn-save-info">Simpan Draft</Button>
+                  <Button onClick={publishInfo} disabled={!hasDraft} className="brand-green hover:brightness-90 gap-1" data-testid="btn-publish-info">
+                    <Send className="h-4 w-4" /> Publish
+                  </Button>
+                </div>
+              </div>
+            </CardContent></Card>
+          )}
+
+          {/* Publish audit log */}
+          <Card data-testid="publish-log-card">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <History className="h-5 w-5 text-brand-blue" />
+                <h3 className="font-display font-semibold">Riwayat Publish ({publishLog.length})</h3>
+              </div>
+              {publishLog.length === 0 ? (
+                <div className="text-sm text-muted-foreground text-center py-6">Belum ada riwayat publish.</div>
+              ) : (
+                <div className="space-y-3" data-testid="publish-log-list">
+                  {publishLog.map((entry) => (
+                    <div key={entry.id} className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30" data-testid={`log-entry-${entry.id}`}>
+                      <div className="w-9 h-9 rounded-full brand-blue flex items-center justify-center shrink-0">
+                        <User className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="font-semibold text-sm">{entry.user_email}</div>
+                          <div className="text-xs text-muted-foreground tabular-nums">
+                            {new Date(entry.published_at).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </div>
+                        </div>
+                        {entry.changed_fields?.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {entry.changed_fields.map((f) => (
+                              <span key={f} className="text-[10px] px-2 py-0.5 rounded-full bg-secondary/15 text-secondary font-mono font-semibold uppercase">{f}</span>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-muted-foreground mt-1">Tidak ada perubahan tercatat</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent></Card>
+        </TabsContent>
+
+        {/* PENGURUS TAB */}
+        <TabsContent value="pengurus" className="space-y-4 mt-4">
+          <div className="flex justify-between items-center">
+            <p className="text-xs text-muted-foreground">Seret <GripVertical className="inline h-3 w-3" /> untuk mengubah urutan tampilan.</p>
+            <Dialog open={openPengurus} onOpenChange={(v) => { setOpenPengurus(v); if (!v) setEditingPengurus(null); }}>
+              <DialogTrigger asChild>
+                <Button className="brand-blue hover:brightness-90 gap-1" onClick={() => setEditingPengurus(null)} data-testid="btn-add-pengurus"><Plus className="h-4 w-4" /> Pengurus Baru</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                <DialogHeader><DialogTitle>{editingPengurus ? "Edit" : "Tambah"} Pengurus</DialogTitle></DialogHeader>
+                <PengurusForm key={editingPengurus?.id || "new"} initial={editingPengurus} onSubmit={savePengurus} />
+              </DialogContent>
+            </Dialog>
+          </div>
+          <SortablePengurus items={pengurus} onReorder={reorderPengurus} onEdit={(p) => { setEditingPengurus(p); setOpenPengurus(true); }} onDelete={delPengurus} />
+        </TabsContent>
+
+        {/* CONTACTS TAB */}
+        <TabsContent value="contacts" className="space-y-4 mt-4">
+          <div className="flex justify-end">
+            <Dialog open={openContact} onOpenChange={(v) => { setOpenContact(v); if (!v) setEditingContact(null); }}>
+              <DialogTrigger asChild>
+                <Button className="brand-blue hover:brightness-90 gap-1" onClick={() => setEditingContact(null)} data-testid="btn-add-contact"><Plus className="h-4 w-4" /> Kontak Baru</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                <DialogHeader><DialogTitle>{editingContact ? "Edit" : "Tambah"} Kontak</DialogTitle></DialogHeader>
+                <ContactForm key={editingContact?.id || "new"} initial={editingContact} onSubmit={saveContact} />
+              </DialogContent>
+            </Dialog>
+          </div>
+          <Card><CardContent className="p-0 divide-y">
+            {contacts.map((c) => (
+              <div key={c.id} className="p-4 flex items-center justify-between gap-4" data-testid={`admin-contact-${c.id}`}>
+                <div className="min-w-0">
+                  <div className="font-semibold truncate">{c.name} <span className="text-xs text-muted-foreground">· {c.category}/{c.subcategory}</span></div>
+                  <div className="text-xs text-muted-foreground">{c.role} · {c.phone}</div>
+                </div>
+                <div className="flex gap-1">
+                  <Button size="icon" variant="ghost" onClick={() => { setEditingContact(c); setOpenContact(true); }} data-testid={`btn-edit-contact-${c.id}`}><Pencil className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="ghost" onClick={() => delContact(c.id)} data-testid={`btn-del-contact-${c.id}`}><Trash2 className="h-4 w-4 text-brand-red" /></Button>
+                </div>
+              </div>
+            ))}
+          </CardContent></Card>
+        </TabsContent>
+
+        {/* ANNOUNCEMENTS TAB */}
+        <TabsContent value="announcements" className="space-y-4 mt-4">
+          <div className="flex justify-end">
+            <Dialog open={openAnn} onOpenChange={setOpenAnn}>
+              <DialogTrigger asChild><Button className="brand-blue hover:brightness-90 gap-1" data-testid="btn-add-announcement"><Plus className="h-4 w-4" /> Pengumuman Baru</Button></DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Tambah Pengumuman</DialogTitle></DialogHeader>
+                <div className="space-y-3">
+                  <div><Label>Judul</Label><Input value={annForm.title} onChange={(e) => setAnnForm({ ...annForm, title: e.target.value })} data-testid="input-ann-title" /></div>
+                  <div><Label>Isi</Label><Textarea value={annForm.body} onChange={(e) => setAnnForm({ ...annForm, body: e.target.value })} data-testid="input-ann-body" /></div>
+                  <div>
+                    <Label>Prioritas</Label>
+                    <Select value={annForm.priority} onValueChange={(v) => setAnnForm({ ...annForm, priority: v })}>
+                      <SelectTrigger data-testid="input-ann-priority"><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="normal">Normal</SelectItem><SelectItem value="urgent">Urgent</SelectItem></SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter><Button onClick={addAnn} className="brand-blue hover:brightness-90" data-testid="btn-save-announcement">Simpan</Button></DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+          <Card><CardContent className="p-0 divide-y">
+            {announcements.map((a) => (
+              <div key={a.id} className="p-4 flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="font-semibold">{a.title} {a.priority === "urgent" && <span className="text-xs text-brand-red">· URGENT</span>}</div>
+                  <div className="text-xs text-muted-foreground line-clamp-2">{a.body}</div>
+                </div>
+                <Button size="icon" variant="ghost" onClick={() => delAnn(a.id)}><Trash2 className="h-4 w-4 text-brand-red" /></Button>
+              </div>
+            ))}
+          </CardContent></Card>
+        </TabsContent>
+
+        {/* AGENDA TAB */}
+        <TabsContent value="agenda" className="space-y-4 mt-4">
+          <div className="flex justify-end">
+            <Dialog open={openAg} onOpenChange={setOpenAg}>
+              <DialogTrigger asChild><Button className="brand-blue hover:brightness-90 gap-1" data-testid="btn-add-agenda"><Plus className="h-4 w-4" /> Agenda Baru</Button></DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Tambah Agenda</DialogTitle></DialogHeader>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2"><Label>Judul</Label><Input value={agForm.title} onChange={(e) => setAgForm({ ...agForm, title: e.target.value })} data-testid="input-ag-title" /></div>
+                  <div><Label>Tanggal</Label><Input type="date" value={agForm.date} onChange={(e) => setAgForm({ ...agForm, date: e.target.value })} data-testid="input-ag-date" /></div>
+                  <div><Label>Waktu</Label><Input value={agForm.time} onChange={(e) => setAgForm({ ...agForm, time: e.target.value })} placeholder="19.30 WIB" data-testid="input-ag-time" /></div>
+                  <div className="col-span-2"><Label>Lokasi</Label><Input value={agForm.location} onChange={(e) => setAgForm({ ...agForm, location: e.target.value })} data-testid="input-ag-location" /></div>
+                  <div className="col-span-2"><Label>Deskripsi</Label><Textarea value={agForm.description} onChange={(e) => setAgForm({ ...agForm, description: e.target.value })} data-testid="input-ag-desc" /></div>
+                </div>
+                <DialogFooter><Button onClick={addAg} className="brand-blue hover:brightness-90" data-testid="btn-save-agenda">Simpan</Button></DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+          <Card><CardContent className="p-0 divide-y">
+            {agenda.map((a) => (
+              <div key={a.id} className="p-4 flex items-center justify-between gap-4">
+                <div>
+                  <div className="font-semibold">{a.title}</div>
+                  <div className="text-xs text-muted-foreground">{a.date} · {a.time} · {a.location}</div>
+                </div>
+                <Button size="icon" variant="ghost" onClick={() => delAg(a.id)}><Trash2 className="h-4 w-4 text-brand-red" /></Button>
+              </div>
+            ))}
+          </CardContent></Card>
+        </TabsContent>
+
+        {/* PREVIEW TAB */}
+        <TabsContent value="preview" className="space-y-4 mt-4" data-testid="preview-tab-content">
+          <Card><CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
+              <div>
+                <h3 className="font-display font-semibold">Preview Landing Page (Live)</h3>
+                <p className="text-xs text-muted-foreground">Refresh setelah menyimpan perubahan di tab Info.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex rounded-lg border bg-muted p-1" data-testid="preview-mode-toggle">
+                  <Button size="sm" variant={previewMode === "desktop" ? "default" : "ghost"} onClick={() => setPreviewMode("desktop")} className="gap-1 h-8" data-testid="preview-desktop">
+                    <Monitor className="h-4 w-4" /> Desktop
+                  </Button>
+                  <Button size="sm" variant={previewMode === "tablet" ? "default" : "ghost"} onClick={() => setPreviewMode("tablet")} className="gap-1 h-8" data-testid="preview-tablet">
+                    <Tablet className="h-4 w-4" /> Tablet
+                  </Button>
+                  <Button size="sm" variant={previewMode === "mobile" ? "default" : "ghost"} onClick={() => setPreviewMode("mobile")} className="gap-1 h-8" data-testid="preview-mobile">
+                    <Smartphone className="h-4 w-4" /> Mobile
+                  </Button>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => { const f = document.getElementById("landing-preview-frame"); if (f) f.src = `/?t=${Date.now()}`; }} data-testid="btn-refresh-preview">Refresh</Button>
+                <a href="/" target="_blank" rel="noreferrer" data-testid="btn-open-landing">
+                  <Button size="sm" className="brand-blue hover:brightness-90 gap-1"><ExternalLink className="h-4 w-4" /> Buka Baru</Button>
+                </a>
+              </div>
+            </div>
+            <div className="border rounded-lg overflow-hidden bg-muted/40 flex justify-center transition-all">
+              <div style={{ width: previewWidths[previewMode], transition: "width 0.3s ease" }} className="bg-background shadow-md">
+                <iframe id="landing-preview-frame" title="Preview Landing" src="/" className="w-full block" style={{ height: "70vh", border: 0 }} data-testid="landing-preview-frame" />
+              </div>
+            </div>
+          </CardContent></Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

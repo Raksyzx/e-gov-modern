@@ -1,0 +1,102 @@
+{
+  "theme": "LIGHT (with robust Dark Mode support)",
+  "archetype": "Archetype 4 (Swiss & High-Contrast) - Modified for GovTech with user-specific brand colors",
+  "typography": {
+    "headings_font": "Poppins",
+    "body_font": "Inter",
+    "hierarchy": {
+      "h1": "text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight",
+      "h2": "text-2xl sm:text-3xl font-semibold tracking-tight",
+      "h3": "text-xl sm:text-2xl font-medium",
+      "h4": "text-lg font-medium",
+      "body": "text-base leading-relaxed",
+      "small": "text-sm",
+      "tiny_label": "text-xs uppercase tracking-[0.2em] font-semibold"
+    }
+  },
+  "colors": {
+    "primary": {
+      "blue": "#1E3A8A",
+      "green": "#059669"
+    },
+    "emergency": {
+      "red": "#DC2626",
+      "orange": "#EA580C"
+    },
+    "background": {
+      "light": "#F8FAFC",
+      "light_card": "#FFFFFF",
+      "dark": "#0F172A",
+      "dark_card": "#1E293B"
+    },
+    "text": {
+      "light_mode_primary": "#0F172A",
+      "light_mode_secondary": "#475569",
+      "dark_mode_primary": "#F8FAFC",
+      "dark_mode_secondary": "#94A3B8"
+    },
+    "borders": {
+      "light": "#E2E8F0",
+      "dark": "#334155"
+    }
+  },
+  "layout_and_spacing": {
+    "desktop": "Sidebar navigation (w-64) + Main Content Area",
+    "mobile": "Bottom navigation bar (fixed, z-50) + Hamburger menu in top header for overflow links",
+    "grid_system": "Mode B: 'Control Room' Grid (grid-cols-1 md:grid-cols-3 lg:grid-cols-4) with gap-4 or gap-6",
+    "spacing_scale": "Tailwind standard (p-4, p-6 for cards). Maintain strict alignment for dense data and clear scanability.",
+    "touch_targets": "Minimum 44px height/width for all interactive elements (buttons, inputs, nav items) - WCAG AA requirement",
+    "card_style": "Flat background, 1px subtle border, rounded-xl, no heavy soft shadows. Focus on crisp geometric layout."
+  },
+  "components": {
+    "buttons": "Shadcn UI Buttons. Touch-friendly (min-h-[44px]). Solid primary actions use #1E3A8A. Distinct Red/Orange buttons strictly for Emergency Actions.",
+    "emergency_cards": "Visual priority: distinct border-l-4 or solid backgrounds using emergency red/orange colors. Include online/availability status indicator (green dot for available, red for busy). Include 'Hubungi Sekarang' WhatsApp/Tel anchor tags.",
+    "stats_cards": "Clean and minimal. Big numbers (Poppins font), small labels (Inter font). Use Lucide icons to indicate metrics (KK, Penduduk, RT/RW).",
+    "navigation": "Desktop: Vertical sidebar layout. Mobile: Fixed bottom tab bar (Home, Emergency, Info, Profile).",
+    "scrolling_ticker": "Use 'react-fast-marquee' for the pengumuman (announcements) ticker below the header. Keep animation smooth and readable.",
+    "maps": "Embed Google Maps for 'Wilayah' in a rounded-xl container with overflow-hidden.",
+    "tables_and_lists": "Use Shadcn Table for Agenda and download lists (PDF/CSV). Zebra striping optional but clear row borders required."
+  },
+  "motion_and_interactions": {
+    "hover_states": "Darken buttons on hover (hover:brightness-90) and ensure explicit text color definition.",
+    "transitions": "Subtle card lifts (-translate-y-1) on hover for non-emergency cards.",
+    "accessibility": "Respect prefers-reduced-motion. Ensure focus rings are clearly visible (e.g., focus:ring-2 focus:ring-[#1E3A8A])."
+  },
+  "accessibility": {
+    "contrast": "Ensure minimum 4.5:1 ratio for normal text and 3:1 for large text. Specifically test text over #DC2626 and #EA580C.",
+    "dark_mode": "Fully implement dark mode toggles with Tailwind's 'dark:' variant classes.",
+    "testing": "All interactive elements MUST include data-testid attributes (e.g., data-testid='call-ambulance-btn')."
+  },
+  "media": {
+    "image_urls": [
+      {
+        "url": "https://images.unsplash.com/photo-1612574935301-af13ccce9258?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTJ8MHwxfHNlYXJjaHwyfHxhbWJ1bGFuY2UlMjBlbWVyZ2VuY3klMjByZXNwb25zZXxlbnwwfHx8fDE3ODMzNTUxMDV8MA&ixlib=rb-4.1.0&q=85",
+        "category": "emergency_vehicle",
+        "description": "Ambulance for Emergency Response card visual context"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1662808782878-941ea16adbdc?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjh8MHwxfHNlYXJjaHwyfHxqYWthcnRhJTIwY2l0eSUyMGFlcmlhbCUyMHZpZXd8ZW58MHx8fHwxNzgzMzU1MTA1fDA&ixlib=rb-4.1.0&q=85",
+        "category": "hero_background",
+        "description": "City aerial view for the header or main dashboard banner if needed"
+      },
+      {
+        "url": "https://images.pexels.com/photos/27471164/pexels-photo-27471164.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "community_meeting",
+        "description": "Community meeting for Kader Info (Posyandu, PKK, Linmas) card images"
+      }
+    ],
+    "icons_library": "lucide-react (Standard crisp icons suitable for GovTech interfaces)"
+  },
+  "instructions_to_main_agent": [
+    "Strictly adhere to the user's specific brand colors: Primary Blue #1E3A8A, Primary Green #059669, Emergency Red #DC2626, Emergency Orange #EA580C.",
+    "Typography MUST strictly use Poppins for Headings/Numbers and Inter for Body text.",
+    "Ensure ALL interactive elements (buttons, inputs) have a minimum height of 44px to satisfy mobile touch target accessibility.",
+    "Implement a Responsive Layout: Desktop sidebar navigation + main content; Mobile bottom navigation + hamburger menu for overflow.",
+    "Build the dashboard using the 'Control Room' grid strategy for high density and scannability, utilizing cards with 1px subtle borders (no muddy shadows).",
+    "Emergency contacts MUST have clear one-tap call/WA buttons and a real-time availability status indicator (e.g., green dot for available).",
+    "Provide a robust Dark/Light mode toggle, mapping colors to deep slate (not pure black) in dark mode to reduce eye strain.",
+    "Add 'react-fast-marquee' for the 'pengumuman scroll' feature.",
+    "Ensure PWA (Progressive Web App) offline caching capabilities are established.",
+    "Every interactive element and significant widget MUST have a descriptive `data-testid` (e.g., `data-testid='btn-emergency-ambulance'`)."
+  ]
+}
