@@ -141,13 +141,7 @@ export default function Layout() {
                 <LogOut className="h-4 w-4" /> Keluar
               </Button>
             </div>
-          ) : (
-            <Link to="/admin/login" data-testid="nav-admin-login" onClick={handleLoginClick}>
-              <Button variant="outline" size="sm" className="w-full gap-2 min-h-[44px]">
-                <Shield className="h-4 w-4" /> Login Admin
-              </Button>
-            </Link>
-          )}
+          ) : null}
         </div>
       </aside>
 
@@ -186,11 +180,7 @@ export default function Layout() {
                           <LogOut className="h-4 w-4" /> Keluar
                         </Button>
                       </>
-                    ) : (
-                      <Link to="/admin/login" onClick={() => { closeSheet(); handleLoginClick(); }}>
-                        <Button variant="outline" className="w-full gap-2 min-h-[44px]"><Shield className="h-4 w-4" /> Login Admin</Button>
-                      </Link>
-                    )}
+                    ) : null}
                   </div>
                 </SheetContent>
               </Sheet>
