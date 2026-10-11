@@ -1,25 +1,28 @@
 import axios from "axios";
 
-// 1. Mengarahkan URL utama Axios langsung ke REST API Supabase Anda
-export const API_BASE = "https://hwajykehhncjnpowrbox.supabase.co/rest/v1";
+// Supabase REST API config from env (CRA prefix: REACT_APP_)
+const API_BASE = process.env.REACT_APP_SUPABASE_URL + '/rest/v1'
+const ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY
+
+if (!API_BASE || !ANON_KEY) {
+  throw new Error(
+    'Missing Supabase credentials. Set REACT_APP_SUPABASE_URL and ' +
+    'REACT_APP_SUPABASE_ANON_KEY in .env.local'
+  )
+}
 
 const api = axios.create({ baseURL: API_BASE });
 
-// 2. Interceptor otomatis untuk menyisipkan Anon Key Supabase di setiap request
+// Auto-attach Supabase headers to every request
 api.interceptors.request.use((config) => {
-  // Masukkan Legacy Anon Key (yang diawali 'eyJ...') milik Anda di sini
-  const anonKey = "eyJhbG...REDACTED_ROTATE_KEY";
-  
-  config.headers["apikey"] = anonKey;
-  config.headers["Authorization"] = `Bearer ${anonKey}`;
-  
+  config.headers["apikey"] = ANON_KEY;
+  config.headers["Authorization"] = `Bearer ${ANON_KEY}`;
   return config;
 });
 
-// Interceptor tanggapan untuk menyelaraskan format data Supabase agar klop dengan komponen lama
+// Normalize Supabase response format for legacy components
 api.interceptors.response.use(
   (response) => {
-    // Komponen lama Anda mengharapkan objek tunggal untuk rute /info atau /auth/me
     if (response.config.url.includes("/info") || response.config.url.includes("/auth/me")) {
       if (Array.isArray(response.data)) {
         response.data = response.data[0] || null;
@@ -27,9 +30,7 @@ api.interceptors.response.use(
     }
     return response;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 export function formatApiError(err) {

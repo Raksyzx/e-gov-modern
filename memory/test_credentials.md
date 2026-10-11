@@ -2,7 +2,7 @@
 
 ## Admin Account
 - Email: `admin@kelurahan.id`
-- Password: `admin123`
+- Password: `[REDACTED]` — Set via `ADMIN_PASSWORD` env var
 - Role: admin
 
 ## Auth Endpoints
@@ -12,3 +12,4 @@
 ## Notes
 - Auth uses JWT bearer tokens (7-day expiry) stored in localStorage on the frontend.
 - Admin is seeded on backend startup from ADMIN_EMAIL / ADMIN_PASSWORD env vars.
+- **Never commit real credentials.** Use `.env.local` for local development.
