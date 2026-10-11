@@ -212,6 +212,161 @@ git push origin master
 
 ---
 
+## 🗄️ Database Schema (MongoDB)
+
+**Database:** `kelurahan` (configurable via `DB_NAME`)
+
+### Collections
+
+#### 1. `users` — Admin authentication
+```js
+{
+  _id: ObjectId,
+  id: String (UUID),          // unique user ID
+  email: String,              // unique, indexed
+  password_hash: String,      // bcrypt
+  name: String,               // e.g. "Admin Kelurahan"
+  role: String,               // "admin" | "rt_admin" (future)
+  created_at: ISODate
+}
+```
+
+#### 2. `contacts` — Emergency & kader contacts
+```js
+{
+  _id: ObjectId,
+  id: String (UUID),
+  category: String,           // "emergency" | "kader" | "service"
+  subcategory: String,        // "rt_rw" | "ambulan" | "pemadam" | "polsek" | "puskesmas" | "posyandu" | "pkk" | "linmas"
+  name: String,
+  role: String,               // e.g. "Ketua RW 01", "Kader Posyandu"
+  phone: String,
+  whatsapp: String | null,    // E.164 format: "6281234567890"
+  wilayah: String | null,     // RT/RW info: "RW 01", "RT 02/RW 01"
+  photo_url: String | null,
+  status: String,             // "available" | "busy" | "offline"
+  schedule: String | null,    // e.g. "Setiap Rabu, 08.00-11.00"
+  notes: String | null,
+  created_at: ISODate
+}
+```
+
+#### 3. `announcements` — Public announcements
+```js
+{
+  _id: ObjectId,
+  id: String (UUID),
+  title: String,
+  body: String,
+  priority: String,           // "urgent" | "normal"
+  created_at: ISODate
+}
+```
+
+#### 4. `agenda` — Upcoming events
+```js
+{
+  _id: ObjectId,
+  id: String (UUID),
+  title: String,
+  date: String,               // ISO date: "2026-03-05"
+  time: String,               // e.g. "19.30 WIB"
+  location: String,
+  description: String
+}
+```
+
+#### 5. `kelurahan_info` — Singleton + draft pattern
+```js
+// Published version
+{
+  _id: "singleton",
+  name: String,               // "Kelurahan Sukamaju"
+  total_kk: Int,
+  total_penduduk: Int,
+  total_rt: Int,
+  total_rw: Int,
+  total_kader: Int,
+  wilayah: String,
+  address: String,
+  map_url: String,            // Google Maps embed URL
+  office_hours: String,
+  logo_url: String,
+  hero_bg_url: String,
+  hero_tagline: String
+}
+
+// Draft version (unpublished changes)
+{
+  _id: "draft",
+  ...same fields as singleton...
+}
+```
+
+#### 6. `pengurus` — Village officials
+```js
+{
+  _id: ObjectId,
+  id: String (UUID),
+  name: String,
+  position: String,           // "Lurah", "Sekretaris Kelurahan", "Kasi Pemerintahan"
+  photo_url: String,
+  phone: String | null,
+  email: String | null,
+  bio: String | null,
+  order: Int                  // sort order for display
+}
+```
+
+#### 7. `files` — Uploaded file metadata (object storage)
+```js
+{
+  _id: ObjectId,
+  id: String (UUID),
+  storage_path: String,       // e.g. "kelurahan-portal/uploads/uuid.jpg"
+  original_filename: String,
+  content_type: String,       // "image/jpeg", "image/png"
+  size: Int,                  // bytes
+  is_deleted: Boolean,
+  created_at: ISODate,
+  deleted_at: ISODate | null
+}
+```
+
+#### 8. `publish_logs` — Audit trail for info publish
+```js
+{
+  _id: ObjectId,
+  id: String (UUID),
+  type: String,               // "info"
+  user_email: String,
+  user_id: String,
+  changed_fields: [String],   // ["name", "total_kk"]
+  snapshot: Object,           // { name: "new", total_kk: 2600 }
+  published_at: ISODate
+}
+```
+
+### Indexes (recommended)
+```js
+db.users.createIndex({ email: 1 }, { unique: true })
+db.contacts.createIndex({ category: 1, subcategory: 1 })
+db.contacts.createIndex({ name: "text", role: "text", wilayah: "text" })
+db.announcements.createIndex({ created_at: -1 })
+db.agenda.createIndex({ date: 1 })
+db.pengurus.createIndex({ order: 1 })
+```
+
+### Seed Data
+Backend auto-seeds on startup (if collections empty):
+- 1 admin user (`ADMIN_EMAIL` / `ADMIN_PASSWORD`)
+- 17 contacts (RT/RW, ambulance, fire, police, health, kader)
+- 4 announcements
+- 4 agenda items
+- 6 pengurus (Lurah, Sekretaris, Kasi)
+
+---
+
 ## 🛡 Security
 
 - **No hardcoded secrets** — semua credentials via env vars
